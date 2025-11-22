@@ -1,2 +1,17 @@
-streamlit
-google-generativeai
+# Framework web
+Flask==2.3.2
+
+# Para hacer solicitudes HTTP a APIs externas
+requests==2.31.0
+
+# Para manejar variables de entorno (como la API key)
+python-dotenv==1.0.1
+
+# Servidor WSGI para producción (opcional si lo subes a Replit o Heroku)
+gunicorn==21.2.0
+
+# Librería oficial de Google AI (si tu app necesita conectar con Google AI)
+google-api-python-client==2.95.0
+google-auth==2.21.0
+google-auth-httplib2==0.1.0
+google-auth-oauthlib==1.1.0
