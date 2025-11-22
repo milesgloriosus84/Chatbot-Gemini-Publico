@@ -1,28 +1,47 @@
 import streamlit as st
 import os
-import google.generativeai as genai  # ← CORRECTO
+import google.generativeai as genai
 
-# --- 1. CONFIGURACIÓN DE LA LLAVE API ---
+# ---------------------------------------------------------
+# FUNCIÓN PARA CONVERTIR MENSAJES AL FORMATO QUE GEMINI USA
+# ---------------------------------------------------------
+def convert_messages(messages):
+    converted = []
+    for msg in messages:
+        converted.append({
+            "role": msg["role"],
+            "parts": [
+                {"text": msg["content"]}
+            ]
+        })
+    return converted
+
+
+# ---------------------------
+# 1. CONFIGURACIÓN DE LA API
+# ---------------------------
 API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# --- 2. CONFIGURACIÓN DE LA APLICACIÓN WEB ---
 if not API_KEY:
     st.set_page_config(page_title="Error", layout="centered")
     st.title("🤖 Mi Asistente IA con Gemini")
-    st.error("🚨 ERROR: La clave API (GEMINI_API_KEY) no está configurada.")
+    st.error("🚨 ERROR: La clave API (GEMINI_API_KEY) no está configurada o es inválida.")
 else:
-    # Configura la API de Gemini
     genai.configure(api_key=API_KEY)
 
-    # Carga el modelo correctamente
-    model = genai.GenerativeModel("gemini-1.5-flash")  # ← MODELO REAL
+    # Cargar modelo correcto
+    model = genai.GenerativeModel("gemini-1.5-flash")
 
-    # Configuración de la página
+    # ---------------------------
+    # 2. INTERFAZ DE LA WEB
+    # ---------------------------
     st.set_page_config(page_title="Mi Asistente IA", layout="centered")
     st.title("🤖 Mi Asistente IA con Gemini")
     st.markdown("---")
 
-    # --- 3. SISTEMA DE CHAT ---
+    # ---------------------------
+    # 3. SISTEMA DE MENSAJES
+    # ---------------------------
     if "messages" not in st.session_state:
         st.session_state.messages = []
         st.session_state.messages.append({
@@ -35,8 +54,12 @@ else:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    # Capturar entrada
+    # ---------------------------
+    # 4. CAPTURAR PREGUNTA DEL USUARIO
+    # ---------------------------
     if prompt := st.chat_input("Escribe tu pregunta aquí..."):
+
+        # Añadir a historial
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with st.chat_message("user"):
@@ -44,17 +67,18 @@ else:
 
         with st.chat_message("model"):
             with st.spinner("Pensando..."):
+
                 try:
-                    # Llamada correcta al modelo
-                    response = model.generate_content(
-                        st.session_state.messages
-                    )
+                    # Llamada CORRECTA a Gemini usando formato válido
+                    formatted_history = convert_messages(st.session_state.messages)
+
+                    response = model.generate_content(formatted_history)
                     ai_response = response.text
 
                 except Exception as e:
-                    ai_response = f"⚠️ Hubo un error al contactar con la IA:\n\n**{e}**"
+                    ai_response = f"⚠️ Error al contactar con la IA:\n\n{e}"
 
             st.markdown(ai_response)
 
-        # Guardar respuesta en historial
+        # Guardar respuesta
         st.session_state.messages.append({"role": "model", "content": ai_response})
