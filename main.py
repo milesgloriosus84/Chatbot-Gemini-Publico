@@ -1,63 +1,60 @@
 import streamlit as st
-import os 
-from google import generativeai
+import os
+import google.generativeai as genai  # ← CORRECTO
 
 # --- 1. CONFIGURACIÓN DE LA LLAVE API ---
-# La clave se lee automáticamente de la variable secreta GEMINI_API_KEY
-# (Configurada en el panel de Secrets de Streamlit Cloud)
-API_KEY = os.environ.get("GEMINI_API_KEY") 
+API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# --- 2. CONFIGURACIÓN DE LA APLICACIÓN WEB (STREAMLIT) ---
-
-# Verifica si la clave fue cargada (SOLO comprueba si está vacía)
+# --- 2. CONFIGURACIÓN DE LA APLICACIÓN WEB ---
 if not API_KEY:
     st.set_page_config(page_title="Error", layout="centered")
     st.title("🤖 Mi Asistente IA con Gemini")
-    st.error("🚨 ERROR: La clave API (GEMINI_API_KEY) no está configurada o es incorrecta en el panel de Secrets de Streamlit Cloud.")
+    st.error("🚨 ERROR: La clave API (GEMINI_API_KEY) no está configurada.")
 else:
-    # Inicializa el cliente de Google Gemini
-    generativeai.configure(api_key=API_KEY)
+    # Configura la API de Gemini
+    genai.configure(api_key=API_KEY)
+
+    # Carga el modelo correctamente
+    model = genai.GenerativeModel("gemini-1.5-flash")  # ← MODELO REAL
 
     # Configuración de la página
-    st.set_page_config(page_title="Mi Asistente IA Personalizado", layout="centered")
+    st.set_page_config(page_title="Mi Asistente IA", layout="centered")
     st.title("🤖 Mi Asistente IA con Gemini")
     st.markdown("---")
-    
-    # --- 3. CREACIÓN DEL CHAT ---
-    
-    # Inicializa el historial de chat si no existe (mantiene la memoria)
+
+    # --- 3. SISTEMA DE CHAT ---
     if "messages" not in st.session_state:
         st.session_state.messages = []
-        # Mensaje inicial del modelo
-        st.session_state.messages.append({"role": "model", "content": "¡Hola! Soy tu asistente de IA. ¿En qué puedo ayudarte hoy?"})
+        st.session_state.messages.append({
+            "role": "model",
+            "content": "¡Hola! Soy tu asistente de IA. ¿En qué puedo ayudarte hoy?"
+        })
 
-    # Muestra los mensajes anteriores en la interfaz
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    # Mostrar historial
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
-    # Captura la entrada del usuario
+    # Capturar entrada
     if prompt := st.chat_input("Escribe tu pregunta aquí..."):
-        # Añade la pregunta del usuario al historial
         st.session_state.messages.append({"role": "user", "content": prompt})
-        
+
         with st.chat_message("user"):
             st.markdown(prompt)
 
         with st.chat_message("model"):
             with st.spinner("Pensando..."):
                 try:
-                    # Llama al modelo de Google Gemini, enviando todo el historial para mantener el contexto
-                    response = generativeai.generate_content(
-                        model='gemini-2.5-flash',
-                        contents=st.session_state.messages 
+                    # Llamada correcta al modelo
+                    response = model.generate_content(
+                        st.session_state.messages
                     )
                     ai_response = response.text
+
                 except Exception as e:
-                    # Mensaje de error si la clave es inválida o hay un fallo de conexión
-                    ai_response = f"⚠️ Hubo un error al contactar con la IA. Error: {e}"
+                    ai_response = f"⚠️ Hubo un error al contactar con la IA:\n\n**{e}**"
 
             st.markdown(ai_response)
-        
-        # Añade la respuesta del modelo al historial
+
+        # Guardar respuesta en historial
         st.session_state.messages.append({"role": "model", "content": ai_response})
